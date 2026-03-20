@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voz do Aluno - Compartilhe suas Ideias</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="container navbar-content">
+            <div class="logo">
+                <i class="fa-solid fa-bullhorn highlight-icon"></i>
+                <h1>Voz do Aluno</h1>
+            </div>
+            
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="action-btn" title="Alternar Tema" style="font-size: 1.25rem;">
+                    <!-- Injected by JS: Moon if Light theme, Sun if Dark Theme -->
+                </button>
+
+                <div class="user-profile" id="user-profile-container">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container layout">
+        <!-- Sidebar / Ranking -->
+        <aside class="sidebar">
+            <div class="card ranking-card">
+                <h2 class="card-title"><i class="fa-solid fa-trophy highlight-icon"></i> Ranking Top Ideias</h2>
+                <ul id="ranking-list" class="ranking-list">
+                    <!-- Populated via JS -->
+                </ul>
+            </div>
+            
+            <div class="card info-card">
+                <h2 class="card-title"><i class="fa-solid fa-circle-info highlight-icon"></i> Como Funciona?</h2>
+                <p>1. Poste a sua sugestão para melhorar a escola.</p>
+                <p>2. Vote nas ideias de outros alunos.</p>
+                <p>3. Ideias com 50 votos ou mais vão automaticamente para a coordenação!</p>
+            </div>
+        </aside>
+
+        <!-- Main Feed -->
+        <section class="feed">
+            <div class="create-post-card card">
+                <div class="create-post-header">
+                    <div class="avatar-small"><i class="fa-solid fa-user"></i></div>
+                    <button class="mock-input" id="open-modal-btn">Compartilhe uma ideia, sugestão ou crítica construtiva...</button>
+                </div>
+            </div>
+
+            <div class="feed-filters">
+                <button class="filter-btn active" data-sort="hot"><i class="fa-solid fa-fire"></i> Mais Votados</button>
+                <button class="filter-btn" data-sort="new"><i class="fa-solid fa-certificate"></i> Mais Recentes</button>
+            </div>
+
+            <div id="posts-container" class="posts-container">
+                <!-- Posts populated via JS -->
+            </div>
+        </section>
+    </main>
+
+    <!-- Post Creation Modal -->
+    <div id="post-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Criar nova postagem</h2>
+                <button class="close-btn" id="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="create-post-form">
+                    <div class="form-group">
+                        <label for="post-title">Título da sugestão</label>
+                        <input type="text" id="post-title" placeholder="Ex: Melhoria na internet da biblioteca..." required minlength="5" maxlength="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="post-desc">Descrição detalhada</label>
+                        <textarea id="post-desc" rows="5" placeholder="Explique mais sobre sua ideia ou sugestão..." required minlength="10" maxlength="1000"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="post-tags">Tags (Opcional)</label>
+                        <input type="text" id="post-tags" placeholder="Ex: Infraestrutura, Biblioteca, Esportes (separadas por vírgula)" maxlength="50">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" id="cancel-post-btn">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Publicar Ideia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Simulated Login/Register) -->
+    <div id="auth-modal" class="modal-overlay">
+        <div class="modal auth-modal-box">
+            <div class="modal-header auth-tabs" style="position: relative;">
+                <button class="tab-btn active" data-tab="login">Entrar</button>
+                <button class="tab-btn" data-tab="register">Cadastrar</button>
+                <button class="close-btn" id="close-auth-btn" style="position: absolute; right: 1rem; top: 1rem; z-index: 10;"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body auth-body">
+                
+                <!-- Login Form -->
+                <form id="login-form" class="auth-form active">
+                    <div class="form-group">
+                        <label for="login-email">E-mail Institucional</label>
+                        <input type="email" id="login-email" placeholder="aluno@escola.edu.br" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Senha</label>
+                        <input type="password" id="login-password" placeholder="••••••••" required>
+                    </div>
+                    <div class="form-actions" style="margin-top: 2rem;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar na Plataforma</button>
+                    </div>
+                </form>
+
+                <!-- Register Form -->
+                <form id="register-form" class="auth-form">
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="reg-name">Nome Completo</label>
+                            <input type="text" id="reg-name" placeholder="Ex: Lucas Silva" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">E-mail Institucional</label>
+                        <input type="email" id="reg-email" placeholder="lucas@escola.edu.br" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group" style="flex: 1;">
+                            <label for="reg-course">Curso Técnico</label>
+                            <select id="reg-course" required>
+                                <option value="" disabled selected>Selecione seu curso...</option>
+                                <option value="Ensino Regular (Sem Curso)">Ensino Regular (Sem Curso)</option>
+                                <option value="Informática">Informática</option>
+                                <option value="Administração">Administração</option>
+                                <option value="Enfermagem">Enfermagem</option>
+                                <option value="Eletrotécnica">Eletrotécnica</option>
+                                <option value="Mecânica">Mecânica</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="flex: 1;">
+                            <label for="reg-class">Turma / Ano</label>
+                            <select id="reg-class" required>
+                                <option value="" disabled selected>Selecione o ano...</option>
+                                <optgroup label="Ensino Fundamental">
+                                    <option value="6º Ano F.">6º Ano</option>
+                                    <option value="7º Ano F.">7º Ano</option>
+                                    <option value="8º Ano F.">8º Ano</option>
+                                    <option value="9º Ano F.">9º Ano</option>
+                                </optgroup>
+                                <optgroup label="Ensino Médio">
+                                    <option value="1º Ano E.M.">1º Ano E.M.</option>
+                                    <option value="2º Ano E.M.">2º Ano E.M.</option>
+                                    <option value="3º Ano E.M.">3º Ano E.M.</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="reg-password">Senha Segura</label>
+                        <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required minlength="6">
+                    </div>
+                    
+                    <div class="form-actions" style="margin-top: 1.5rem;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Criar Conta</button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="modal-overlay">
+        <div class="modal auth-modal-box">
+            <div class="modal-header">
+                <h2>Denunciar Postagem</h2>
+                <button class="close-btn" onclick="closeReportModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body auth-body">
+                <form id="report-form">
+                    <input type="hidden" id="report-post-id">
+                    <div class="form-group">
+                        <label for="report-reason">Motivo da denúncia</label>
+                        <textarea id="report-reason" rows="4" placeholder="Ex: Palavreado ofensivo, agressão, spam..." required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeReportModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, var(--downvote-color), #b91c1c);">Enviar Denúncia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Profile Modal -->
+    <div id="edit-profile-modal" class="modal-overlay">
+        <div class="modal auth-modal-box">
+            <div class="modal-header">
+                <h2>Editar Perfil</h2>
+                <button class="close-btn" onclick="closeEditProfileModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body auth-body">
+                <form id="edit-profile-form">
+                    <div class="form-group">
+                        <label for="edit-name">Nome de Exibição</label>
+                        <input type="text" id="edit-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-course">Curso Técnico</label>
+                        <select id="edit-course" required>
+                            <option value="Ensino Regular (Sem Curso)">Ensino Regular (Sem Curso)</option>
+                            <option value="Informática">Informática</option>
+                            <option value="Administração">Administração</option>
+                            <option value="Enfermagem">Enfermagem</option>
+                            <option value="Eletrotécnica">Eletrotécnica</option>
+                            <option value="Mecânica">Mecânica</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-password">Nova Senha <span style="font-size: 0.8rem; color: var(--text-muted);">(opcional)</span></label>
+                        <input type="password" id="edit-password" placeholder="Preencha apenas se quiser alterar (min 6 carac.)" minlength="6">
+                    </div>
+                    <div class="form-actions" style="margin-top: 2rem;">
+                        <button type="button" class="btn btn-outline" onclick="closeEditProfileModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>
