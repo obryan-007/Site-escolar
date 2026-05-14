@@ -28,6 +28,26 @@ function containsBadWords(text) {
 let posts = JSON.parse(localStorage.getItem(STORAGE_KEY));
 let currentUser = JSON.parse(localStorage.getItem(USER_KEY));
 let currentSort = 'hot'; // 'hot' or 'new'
+let visiblePostsCount = 5;
+
+const NOTIFICATIONS_KEY = 'voz_do_aluno_notifications';
+const ANNOUNCEMENTS_KEY = 'voz_do_aluno_announcements';
+const USERS_LIST_KEY = 'voz_do_aluno_users_list';
+const BANNED_USERS_KEY = 'voz_do_aluno_banned_users';
+
+let usersList = JSON.parse(localStorage.getItem(USERS_LIST_KEY)) || [];
+let bannedUsers = JSON.parse(localStorage.getItem(BANNED_USERS_KEY)) || [];
+let userNotifications = [];
+let announcements = JSON.parse(localStorage.getItem(ANNOUNCEMENTS_KEY)) || [];
+if (announcements.length === 0) {
+    announcements = [
+        { id: 'a1', type: 'official', title: 'Portal Ativo', text: 'Bem-vindos ao portal de ideias. A coordenação está de olho!', date: new Date().toISOString() }
+    ];
+    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+}
+if (currentUser) {
+    userNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + currentUser.uid)) || [];
+}
 
 // DOM Elements
 const postsContainer = document.getElementById('posts-container');
@@ -40,6 +60,30 @@ const cancelPostBtn = document.getElementById('cancel-post-btn');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const toastContainer = document.getElementById('toast-container');
 const userProfileContainer = document.getElementById('user-profile-container');
+const loadMoreBtn = document.getElementById('load-more-btn');
+
+if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', () => {
+        visiblePostsCount += 5;
+        renderPosts();
+    });
+}
+
+window.togglePasswordVisibility = function(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    const btn = input.nextElementSibling;
+    const icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
 
 // Auth DOM Elements
 const authModal = document.getElementById('auth-modal');
@@ -130,7 +174,6 @@ if (!posts || !posts[0] || !posts[0].hasOwnProperty('comments')) {
 // Migrate any existing posts missing arrays
 posts.forEach(p => {
     if(!p.comments) p.comments = [];
-    if(!p.tags) p.tags = [];
 });
 
 // --- Auth Logic ---
@@ -148,6 +191,7 @@ function updateAuthUI() {
             <div class="dropdown">
                 <div class="avatar" style="cursor: pointer;" onclick="toggleProfileDropdown(event)"><i class="fa-solid fa-user"></i></div>
                 <div class="dropdown-content profile-dropdown" id="profile-dropdown">
+                    ${currentUser.role === 'professor' ? '<a href="admin.html" class="dropdown-item" style="color: var(--highlight);"><i class="fa-solid fa-shield-halved"></i> Painel Administrativo</a>' : ''}
                     <button class="dropdown-item" onclick="editProfile()"><i class="fa-solid fa-user-pen"></i> Editar Perfil</button>
                     <button class="dropdown-item" onclick="logout()" style="color: var(--downvote-color);"><i class="fa-solid fa-right-from-bracket"></i> Sair da Conta</button>
                 </div>
@@ -165,63 +209,15 @@ window.toggleProfileDropdown = function(e) {
     document.getElementById('profile-dropdown').classList.toggle('show');
 }
 
-const editProfileModal = document.getElementById('edit-profile-modal');
-const editProfileForm = document.getElementById('edit-profile-form');
-
 window.editProfile = function() {
-    if (!currentUser) return;
-    document.getElementById('edit-name').value = currentUser.name;
-    const courseSelect = document.getElementById('edit-course');
-    if (courseSelect) courseSelect.value = currentUser.course || 'Ensino Regular (Sem Curso)';
-    document.getElementById('edit-password').value = '';
-    
-    editProfileModal.classList.add('active');
-    document.body.style.overflow = 'hidden';
+    showToast("Aviso", "Função de edição de perfil em desenvolvimento!", "info");
 }
-
-window.closeEditProfileModal = function() {
-    editProfileModal.classList.remove('active');
-    document.body.style.overflow = 'auto';
-}
-
-editProfileForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    currentUser.name = document.getElementById('edit-name').value;
-    currentUser.course = document.getElementById('edit-course').value;
-    
-    const newPass = document.getElementById('edit-password').value;
-    if (newPass && newPass.length >= 6) {
-        showToast("Sucesso", "Senha e perfil alterados com sucesso!", "success");
-    } else {
-        showToast("Sucesso", "Perfil atualizado!", "success");
-    }
-    
-    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
-    
-    const authorMetaStr = currentUser.course === 'Ensino Regular (Sem Curso)' 
-        ? currentUser.className : `${currentUser.className} | ${currentUser.course}`;
-    
-    // Altera o nome do autor nos posts antigos dinamicamente
-    posts.forEach(p => {
-        if (p.authorUid === currentUser.uid) {
-            p.author = currentUser.name;
-            p.authorMeta = authorMetaStr;
-        }
-        p.comments.forEach(c => {
-            if (c.authorUid === currentUser.uid) {
-                c.author = currentUser.name;
-            }
-        });
-    });
-    savePosts();
-    updateAuthUI();
-    renderPosts();
-    closeEditProfileModal();
-});
 
 window.logout = function () {
     localStorage.removeItem(USER_KEY);
     currentUser = null;
+    userNotifications = [];
+    if(typeof renderNotificationsUI === 'function') renderNotificationsUI();
     updateAuthUI();
     renderPosts(); // Re-render posts to hide admin/author menus
 }
@@ -252,43 +248,140 @@ tabBtns.forEach(btn => {
     });
 });
 
+const ALUNO_DOMAIN = '@aluno.educacao.sp.gov.br';
+const PROF_DOMAIN = '@prof.educacao.sp.gov.br';
+
+function validateInstitutionalEmail(email) {
+    if (email.endsWith(ALUNO_DOMAIN)) return 'aluno';
+    if (email.endsWith(PROF_DOMAIN)) return 'professor';
+    return null;
+}
+
+let verificationTimer = null;
+let verificationTimeLeft = 60;
+
+function startVerificationTimer() {
+    clearInterval(verificationTimer);
+    verificationTimeLeft = 60;
+    const resendBtn = document.getElementById('resend-code-btn');
+    resendBtn.disabled = true;
+    
+    verificationTimer = setInterval(() => {
+        verificationTimeLeft--;
+        if (verificationTimeLeft <= 0) {
+            clearInterval(verificationTimer);
+            resendBtn.disabled = false;
+            resendBtn.textContent = 'Reenviar código';
+        } else {
+            resendBtn.textContent = `Reenviar código em ${verificationTimeLeft}s`;
+        }
+    }, 1000);
+}
+
+document.getElementById('resend-code-btn').addEventListener('click', () => {
+    showToast('Enviado', 'Um novo código foi enviado para o seu e-mail.', 'success');
+    startVerificationTimer();
+});
+
+const verificationForm = document.getElementById('verification-form');
+verificationForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const code = document.getElementById('ver-code').value.trim();
+    if (code.length !== 6) {
+        showToast('Erro', 'O código deve ter 6 dígitos.', 'error');
+        return;
+    }
+    
+    localStorage.setItem(USER_KEY, JSON.stringify(window.pendingUser));
+    currentUser = window.pendingUser;
+    
+    // Save to users list if not exists
+    if (!usersList.find(u => u.uid === currentUser.uid)) {
+        usersList.push(currentUser);
+        localStorage.setItem(USERS_LIST_KEY, JSON.stringify(usersList));
+    }
+    
+    window.pendingUser = null;
+    
+    document.getElementById('verification-modal').classList.remove('active');
+    document.body.style.overflow = 'auto'; // allow scroll again
+    document.getElementById('ver-code').value = '';
+    userNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + currentUser.uid)) || [];
+    if(typeof renderNotificationsUI === 'function') renderNotificationsUI();
+    
+    updateAuthUI();
+    renderPosts();
+    showToast('Sucesso', 'Conta confirmada! Bem-vindo(a) à plataforma.', 'success');
+});
+
+document.getElementById('close-ver-btn').addEventListener('click', () => {
+    document.getElementById('verification-modal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    window.pendingUser = null;
+});
+
 registerForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const email = document.getElementById('reg-email').value;
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();
 
-    if (!email.includes('@')) {
-        showToast('Erro', 'Por favor, insira um e-mail válido.', 'error');
+    const role = validateInstitutionalEmail(email);
+    if (!role) {
+        showToast('Erro', 'Por favor, use um e-mail institucional válido (@aluno.educacao.sp.gov.br ou @prof.educacao.sp.gov.br).', 'error');
         return;
     }
 
-    const newUser = {
+    if (bannedUsers.includes(email)) {
+        showToast('Erro', 'Esta conta foi banida por violação das regras.', 'error');
+        return;
+    }
+
+    const isProf = role === 'professor';
+    const course = isProf ? 'Professor/Direção' : document.getElementById('reg-course').value;
+    const className = isProf ? 'Professor' : document.getElementById('reg-class').value;
+
+    window.pendingUser = {
         uid: 'user_' + Date.now().toString(),
         name: document.getElementById('reg-name').value,
         email: email,
-        course: document.getElementById('reg-course').value,
-        className: document.getElementById('reg-class').value
+        course: course,
+        className: className,
+        role: role
     };
 
-    localStorage.setItem(USER_KEY, JSON.stringify(newUser));
-    currentUser = newUser;
-    updateAuthUI();
-    renderPosts();
+    authModal.classList.remove('active');
+    document.getElementById('verification-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+    startVerificationTimer();
 });
 
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const email = document.getElementById('login-email').value;
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+
+    const role = validateInstitutionalEmail(email);
+    if (!role) {
+        showToast('Erro', 'Por favor, use um e-mail institucional válido (@aluno.educacao.sp.gov.br ou @prof.educacao.sp.gov.br).', 'error');
+        return;
+    }
+
+    if (bannedUsers.includes(email)) {
+        showToast('Erro', 'Esta conta foi banida por violação das regras.', 'error');
+        return;
+    }
 
     const mockUser = {
         uid: 'user_' + email, // Mock uid
         name: email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1),
         email: email,
-        course: 'Qualquer',
-        className: 'Aluno'
+        course: role === 'professor' ? 'Professor/Direção' : 'Ensino Regular',
+        className: role === 'professor' ? 'Professor' : 'Aluno',
+        role: role
     };
 
     localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
     currentUser = mockUser;
+    userNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + currentUser.uid)) || [];
+    if(typeof renderNotificationsUI === 'function') renderNotificationsUI();
     updateAuthUI();
     renderPosts();
 });
@@ -312,7 +405,23 @@ function renderPosts() {
         }
     });
 
-    sortedPosts.forEach(post => {
+    if (sortedPosts.length === 0) {
+        postsContainer.innerHTML = `
+            <div class="empty-state">
+                <i class="fa-solid fa-ghost empty-state-icon"></i>
+                <h3>Nenhuma ideia por aqui</h3>
+                <p>Seja o primeiro a compartilhar uma sugestão!</p>
+            </div>
+        `;
+        const loadMoreContainer = document.getElementById('load-more-container');
+        if (loadMoreContainer) loadMoreContainer.style.display = 'none';
+        renderRanking();
+        return;
+    }
+
+    const postsToShow = sortedPosts.slice(0, visiblePostsCount);
+
+    postsToShow.forEach(post => {
         const score = post.upvotes - post.downvotes;
         const scoreClass = score > 0 ? 'positive' : (score < 0 ? 'negative' : '');
 
@@ -328,7 +437,20 @@ function renderPosts() {
         const dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
         
         const isAuthor = currentUser && post.authorUid === currentUser.uid;
-        const tagsHtml = post.tags && post.tags.length ? post.tags.map(t => `<span class="tag-badge">${t}</span>`).join('') : '';
+
+        let statusHtml = '';
+        if (post.status && post.status !== 'none') {
+            let statusText = '';
+            let statusClass = '';
+            if (post.status === 'analysis') { statusText = 'Em Análise'; statusClass = 'status-analysis'; }
+            else if (post.status === 'approved') { statusText = 'Aprovado'; statusClass = 'status-approved'; }
+            else if (post.status === 'rejected') { statusText = 'Rejeitado'; statusClass = 'status-rejected'; }
+            else if (post.status === 'done') { statusText = 'Concluído'; statusClass = 'status-done'; }
+            
+            if (statusText) {
+                statusHtml = `<span class="status-badge ${statusClass}">${statusText}</span>`;
+            }
+        }
 
         const postEl = document.createElement('article');
         postEl.className = 'post';
@@ -347,7 +469,8 @@ function renderPosts() {
                 <div class="post-meta" style="justify-content: space-between;">
                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <span class="post-author"><i class="fa-solid fa-user-circle"></i> ${post.author}</span>
-                        ${post.authorMeta ? `<span style="color: var(--primary-medium); font-weight: 600;">[${post.authorMeta}]</span>` : ''}
+                        ${post.role === 'professor' || (post.authorMeta && post.authorMeta.includes('Professor')) ? `<span class="teacher-badge"><i class="fa-solid fa-graduation-cap"></i> PROFESSOR</span>` : ''}
+                        ${post.authorMeta && !(post.role === 'professor' || (post.authorMeta && post.authorMeta.includes('Professor'))) ? `<span style="color: var(--primary-medium); font-weight: 600;">[${post.authorMeta}]</span>` : ''}
                         <span>• ${dateStr}</span>
                         ${post.highlighted ? '<span class="post-highlight-badge"><i class="fa-solid fa-star"></i> DESTAQUE</span>' : ''}
                     </div>
@@ -360,11 +483,9 @@ function renderPosts() {
                         </div>
                     </div>` : ''}
                 </div>
-                <h3 class="post-title">${post.title}</h3>
+                <h3 class="post-title">${post.title}${statusHtml}</h3>
                 <p class="post-desc">${post.description}</p>
                 
-                ${tagsHtml ? `<div class="tags-container" style="margin-bottom: 1.5rem;">${tagsHtml}</div>` : ''}
-
                 <div class="post-actions">
                     <button class="action-btn" onclick="toggleCommentsSection('${post.id}')"><i class="fa-regular fa-comment"></i> Compartilhar / ${post.comments ? post.comments.length : 0} Comentários</button>
                     <button class="action-btn" onclick="reportPost('${post.id}')"><i class="fa-regular fa-flag"></i> Reportar</button>
@@ -390,6 +511,15 @@ function renderPosts() {
         postsContainer.appendChild(postEl);
     });
 
+    const loadMoreContainer = document.getElementById('load-more-container');
+    if (loadMoreContainer) {
+        if (sortedPosts.length > visiblePostsCount) {
+            loadMoreContainer.style.display = 'block';
+        } else {
+            loadMoreContainer.style.display = 'none';
+        }
+    }
+
     renderRanking();
 }
 
@@ -399,18 +529,43 @@ window.togglePostDropdown = function(e, id) {
     document.getElementById(`post-dropdown-${id}`).classList.toggle('show');
 }
 
+let editingPostId = null;
+let postToDeleteId = null;
+
 window.editPost = function(id) {
-    alert("Função de edição em desenvolvimento.");
+    const post = posts.find(p => p.id === id);
+    if (!post) return;
+    
+    document.getElementById('post-modal-title').textContent = 'Editar Postagem';
+    document.getElementById('post-title').value = post.title;
+    document.getElementById('post-desc').value = post.description;
+    
+    editingPostId = id;
+    postModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
 }
 
 window.deletePost = function(id) {
-    if(confirm("Tem certeza que deseja excluir esta ideia?")) {
-        posts = posts.filter(p => p.id !== id);
+    postToDeleteId = id;
+    document.getElementById('confirm-delete-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+window.closeDeleteModal = function() {
+    document.getElementById('confirm-delete-modal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+    postToDeleteId = null;
+}
+
+document.getElementById('confirm-delete-btn').addEventListener('click', () => {
+    if (postToDeleteId) {
+        posts = posts.filter(p => p.id !== postToDeleteId);
         savePosts();
         renderPosts();
-        showToast("Excluído", "Seu post foi removido com sucesso.", "success");
+        closeDeleteModal();
+        showToast("Excluído", "Sua postagem foi removida com sucesso.", "success");
     }
-}
+});
 
 function renderRanking() {
     rankingList.innerHTML = '';
@@ -438,6 +593,7 @@ function renderRanking() {
 }
 
 // Voting logic
+// Voting logic
 window.handleVote = function (id, type) {
     if (!currentUser) {
         showAuthModal();
@@ -459,11 +615,22 @@ window.handleVote = function (id, type) {
         delete post.userVotes[currentUser.uid]; // Toggle off
     } else {
         post.userVotes[currentUser.uid] = type;
-        if (type === 'up') post.upvotes++;
+        if (type === 'up') {
+            post.upvotes++;
+            if (post.authorUid !== currentUser.uid && typeof createNotification === 'function') {
+                createNotification(post.authorUid, `Sua ideia "${post.title.substring(0, 30)}..." recebeu um voto!`, 'fa-arrow-up');
+            }
+        }
         if (type === 'down') post.downvotes++;
     }
 
+    const previousHighlighted = post.highlighted;
     post.highlighted = post.upvotes >= HIGHLIGHT_THRESHOLD;
+
+    if (!previousHighlighted && post.highlighted && typeof createNotification === 'function') {
+        createNotification(post.authorUid, `Parabéns! Sua ideia atingiu 50 votos e será levada à coordenação.`, 'fa-star');
+        createAnnouncement('milestone', 'Ideia em Alta', `A ideia "${post.title}" alcançou 50 votos e será analisada pela equipe!`);
+    }
 
     savePosts();
     renderPosts();
@@ -482,29 +649,38 @@ window.scrollToPost = function(id) {
     }
 }
 
-const reportModal = document.getElementById('report-modal');
-const reportForm = document.getElementById('report-form');
+let postToReportId = null;
 
 window.reportPost = function(id) {
     if (!currentUser) {
         showAuthModal();
         return;
     }
-    document.getElementById('report-post-id').value = id;
-    reportModal.classList.add('active');
+    postToReportId = id;
+    document.getElementById('report-modal').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
 window.closeReportModal = function() {
-    reportModal.classList.remove('active');
+    document.getElementById('report-modal').classList.remove('active');
     document.body.style.overflow = 'auto';
-    reportForm.reset();
+    postToReportId = null;
+    document.getElementById('report-form').reset();
 }
 
-reportForm.addEventListener('submit', (e) => {
+document.getElementById('report-form').addEventListener('submit', (e) => {
     e.preventDefault();
-    closeReportModal();
-    showToast("Reportado", "A postagem foi enviada para a moderação escolar. Obrigado por ajudar a manter a comunidade segura.", "success");
+    const reason = document.getElementById('report-reason').value.trim();
+    if (reason && postToReportId) {
+        const post = posts.find(p => p.id === postToReportId);
+        if (post) {
+            if (!post.reports) post.reports = [];
+            post.reports.push({ reason, by: currentUser.uid, date: new Date().toISOString() });
+            savePosts();
+        }
+        closeReportModal();
+        showToast("Reportado", "A denúncia foi enviada para a moderação escolar. Obrigado por ajudar a manter a comunidade segura.", "success");
+    }
 });
 
 // Comments Logic
@@ -562,6 +738,7 @@ window.renderComments = function(postId) {
                     <div class="comment-author-row">
                         <span>
                             <span class="comment-author">${comment.author}</span>
+                            ${comment.role === 'professor' || (comment.authorMeta && comment.authorMeta.includes('Professor')) ? `<span class="teacher-badge-small"><i class="fa-solid fa-graduation-cap"></i> PROFESSOR</span>` : ''}
                             ${isPinned ? '<span class="pinned-badge"><i class="fa-solid fa-thumbtack"></i> Fixado</span>' : ''}
                         </span>
                         <span class="comment-date">${dateStr}</span>
@@ -600,12 +777,24 @@ window.addComment = function(e, postId) {
         id: 'c_' + Date.now(),
         authorUid: currentUser.uid,
         author: currentUser.name,
+        authorMeta: currentUser.role === 'professor' ? 'Professor' : '', // Fallback for old check logic
+        role: currentUser.role,
         text: text,
         createdAt: new Date().toISOString(),
         likes: 0
     };
 
     post.comments.push(newComment);
+    
+    if (post.authorUid !== currentUser.uid && typeof createNotification === 'function') {
+        const textPreview = text.length > 20 ? text.substring(0, 20) + '...' : text;
+        createNotification(post.authorUid, `${currentUser.name} comentou: "${textPreview}"`, 'fa-comment');
+    }
+    
+    if ((currentUser.role === 'professor' || currentUser.course === 'Professor/Direção') && typeof createAnnouncement === 'function') {
+        createAnnouncement('official', 'Resposta Oficial', `A coordenação respondeu à ideia "${post.title}".`);
+    }
+
     savePosts();
     input.value = '';
     renderComments(postId);
@@ -660,6 +849,8 @@ function openModal() {
         showAuthModal();
         return;
     }
+    document.getElementById('post-modal-title').textContent = 'Criar nova postagem';
+    editingPostId = null;
     postModal.classList.add('active');
     document.body.style.overflow = 'hidden';
 }
@@ -667,6 +858,7 @@ function closeModal() {
     postModal.classList.remove('active');
     document.body.style.overflow = 'auto';
     postForm.reset();
+    editingPostId = null;
 }
 
 openModalBtn.addEventListener('click', openModal);
@@ -681,48 +873,63 @@ postForm.addEventListener('submit', (e) => {
 
     const title = document.getElementById('post-title').value.trim();
     const desc = document.getElementById('post-desc').value.trim();
-    const tagsInput = document.getElementById('post-tags').value.trim();
 
-    if (containsBadWords(title) || containsBadWords(desc) || containsBadWords(tagsInput)) {
+    if (containsBadWords(title) || containsBadWords(desc)) {
         showToast("Aviso", "Sua postagem contém palavras impróprias. Por favor, reescreva de forma respeitosa.", "error");
         return;
     }
 
     if (title && desc && currentUser) {
-        const authorMetaStr = currentUser.course === 'Ensino Regular (Sem Curso)'
-            ? currentUser.className
-            : `${currentUser.className} | ${currentUser.course}`;
+        if (typeof editingPostId !== 'undefined' && editingPostId !== null) {
+            // Edição
+            const post = posts.find(p => p.id === editingPostId);
+            if (post) {
+                post.title = title;
+                post.description = desc;
+                savePosts();
+                renderPosts();
+                closeModal();
+                showToast("Sucesso", "Ideia atualizada com sucesso!", "success");
+            }
+        } else {
+            // Criação
+            const isProf = currentUser.role === 'professor';
+            const courseMeta = isProf ? 'Professor/Direção' : currentUser.course;
+            const classMeta = isProf ? 'Professor' : currentUser.className;
 
-        let parsedTags = [];
-        if (tagsInput) {
-            parsedTags = tagsInput.split(',').map(t => t.trim()).filter(t => t.length > 0).slice(0, 3);
+            const authorMetaStr = courseMeta === 'Ensino Regular (Sem Curso)'
+                ? classMeta
+                : `${classMeta} | ${courseMeta}`;
+
+            const newPost = {
+                id: Date.now().toString(),
+                title: title,
+                description: desc,
+                upvotes: 1,
+                downvotes: 0,
+                createdAt: new Date().toISOString(),
+                author: currentUser.name,
+                authorUid: currentUser.uid,
+                authorMeta: authorMetaStr,
+                role: currentUser.role,
+                highlighted: false,
+                userVotes: {
+                    [currentUser.uid]: 'up' // auto upvote own post
+                },
+                comments: [],
+                pinnedCommentId: null
+            };
+
+            posts.unshift(newPost);
+            savePosts();
+
+            const newSortBtn = document.querySelector('[data-sort="new"]');
+            if (newSortBtn) newSortBtn.click();
+            else renderPosts();
+            
+            closeModal();
+            showToast("Sucesso", "Ideia postada com sucesso!", "success");
         }
-
-        const newPost = {
-            id: Date.now().toString(),
-            title: title,
-            description: desc,
-            upvotes: 1,
-            downvotes: 0,
-            createdAt: new Date().toISOString(),
-            author: currentUser.name,
-            authorUid: currentUser.uid,
-            authorMeta: authorMetaStr,
-            highlighted: false,
-            userVotes: {
-                [currentUser.uid]: 'up' // auto upvote own post
-            },
-            tags: parsedTags,
-            comments: [],
-            pinnedCommentId: null
-        };
-
-        posts.unshift(newPost);
-        savePosts();
-
-        document.querySelector('[data-sort="new"]').click();
-        closeModal();
-        showToast("Sucesso", "Ideia postada com sucesso!", "success");
     }
 });
 
@@ -768,3 +975,148 @@ function showHighlightToast(title) {
 // Initial Boostrap
 updateAuthUI();
 renderPosts();
+
+// --- Notifications & Announcements ---
+function saveNotifications() {
+    if (currentUser) {
+        localStorage.setItem(NOTIFICATIONS_KEY + '_' + currentUser.uid, JSON.stringify(userNotifications));
+    }
+}
+function saveAnnouncements() {
+    localStorage.setItem(ANNOUNCEMENTS_KEY, JSON.stringify(announcements));
+}
+
+window.createNotification = function(targetUid, text, iconClass) {
+    if (!targetUid) return;
+    const notifs = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + targetUid)) || [];
+    notifs.unshift({
+        id: 'n_' + Date.now() + Math.random().toString(36).substr(2, 5),
+        text: text,
+        icon: iconClass,
+        read: false,
+        date: new Date().toISOString()
+    });
+    if (notifs.length > 20) notifs.pop();
+    
+    localStorage.setItem(NOTIFICATIONS_KEY + '_' + targetUid, JSON.stringify(notifs));
+    
+    if (currentUser && currentUser.uid === targetUid) {
+        userNotifications = notifs;
+        renderNotificationsUI();
+    }
+}
+
+window.createAnnouncement = function(type, title, text) {
+    announcements.unshift({
+        id: 'a_' + Date.now(),
+        type: type,
+        title: title,
+        text: text,
+        date: new Date().toISOString()
+    });
+    if (announcements.length > 5) announcements.pop();
+    saveAnnouncements();
+    renderAnnouncements();
+}
+
+window.toggleNotificationDropdown = function(e) {
+    e.stopPropagation();
+    document.querySelectorAll('.dropdown-content').forEach(el => {
+        if(el.id !== 'notification-dropdown') el.classList.remove('show');
+    });
+    const dropdown = document.getElementById('notification-dropdown');
+    dropdown.classList.toggle('show');
+    if (dropdown.classList.contains('show')) {
+        renderNotificationsList();
+    }
+}
+
+window.renderNotificationsUI = function() {
+    const bellContainer = document.getElementById('notification-bell-container');
+    const badge = document.getElementById('notification-badge');
+    if (!currentUser) {
+        bellContainer.style.display = 'none';
+        return;
+    }
+    bellContainer.style.display = 'block';
+    
+    const unreadCount = userNotifications.filter(n => !n.read).length;
+    if (unreadCount > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
+window.renderNotificationsList = function() {
+    const listEl = document.getElementById('notification-list');
+    listEl.innerHTML = '';
+    
+    if (userNotifications.length === 0) {
+        listEl.innerHTML = '<li style="padding: 1.5rem 1rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">Nenhuma notificação no momento.</li>';
+        return;
+    }
+    
+    userNotifications.forEach(n => {
+        const dateStr = new Date(n.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour:'2-digit', minute:'2-digit' });
+        listEl.innerHTML += `
+            <li class="notification-item ${n.read ? '' : 'unread'}" onclick="markNotificationRead('${n.id}')">
+                <div class="notification-icon"><i class="fa-solid ${n.icon}"></i></div>
+                <div class="notification-content">
+                    <p>${n.text}</p>
+                    <span>${dateStr}</span>
+                </div>
+            </li>
+        `;
+    });
+}
+
+window.markNotificationRead = function(id) {
+    const notif = userNotifications.find(n => n.id === id);
+    if (notif && !notif.read) {
+        notif.read = true;
+        saveNotifications();
+        renderNotificationsUI();
+        renderNotificationsList();
+    }
+}
+
+window.markAllNotificationsRead = function() {
+    userNotifications.forEach(n => n.read = true);
+    saveNotifications();
+    renderNotificationsUI();
+    renderNotificationsList();
+}
+
+window.renderAnnouncements = function() {
+    const listEl = document.getElementById('announcements-list');
+    if (!listEl) return;
+    listEl.innerHTML = '';
+    
+    if (announcements.length === 0) {
+        listEl.innerHTML = '<li style="padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.9rem;">Nenhum aviso no momento.</li>';
+        return;
+    }
+    
+    const displayAnnouncements = announcements.slice(0, 3);
+    
+    displayAnnouncements.forEach(a => {
+        const typeClass = a.type === 'official' ? 'announcement-type-official' : 'announcement-type-milestone';
+        const icon = a.type === 'official' ? '<i class="fa-solid fa-circle-check"></i>' : '<i class="fa-solid fa-fire"></i>';
+        
+        listEl.innerHTML += `
+            <li class="announcement-item">
+                <div class="announcement-header ${typeClass}">
+                    <span>${icon} ${a.title}</span>
+                </div>
+                <div class="announcement-text">${a.text}</div>
+            </li>
+        `;
+    });
+}
+
+// Executar após boostrap
+renderAnnouncements();
+if (currentUser) renderNotificationsUI();
+

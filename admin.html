@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Voz do Aluno</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body { background-color: var(--bg-color); }
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 250px 1fr;
+            gap: 2rem;
+            min-height: calc(100vh - 70px);
+            padding: 2rem;
+        }
+        .admin-sidebar {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            height: fit-content;
+        }
+        .admin-menu-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 1rem;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s;
+        }
+        .admin-menu-btn:hover {
+            background-color: var(--primary-light);
+            color: var(--text-main);
+        }
+        .admin-menu-btn.active {
+            background: linear-gradient(135deg, var(--primary-medium), var(--highlight));
+            color: white;
+            box-shadow: var(--glow-primary);
+        }
+        .admin-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+        .view-section {
+            display: none;
+            animation: popIn 0.3s ease-out;
+        }
+        .view-section.active {
+            display: block;
+        }
+        .table-wrapper {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+        }
+        th {
+            background-color: rgba(0,0,0,0.2);
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+        tr:last-child td {
+            border-bottom: none;
+        }
+        .stat-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+        .stat-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .stat-icon {
+            font-size: 2rem;
+            color: var(--primary-medium);
+            background: var(--primary-light);
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-md);
+        }
+        .stat-info h3 { margin: 0; font-size: 1.5rem; font-weight: 800; }
+        .stat-info p { margin: 0; color: var(--text-muted); font-size: 0.9rem; }
+        
+        .report-reason-badge {
+            background-color: rgba(239, 68, 68, 0.1);
+            color: var(--downvote-color);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 700;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header class="navbar">
+        <div class="container navbar-content" style="max-width: 1400px;">
+            <div class="logo">
+                <i class="fa-solid fa-shield-halved highlight-icon"></i>
+                <h1>Painel Admin</h1>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <a href="index.html" class="btn btn-outline" style="text-decoration: none;"><i class="fa-solid fa-arrow-left"></i> Voltar ao Site</a>
+                <div class="user-profile" id="user-profile-container">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="admin-layout" style="max-width: 1400px; margin: 0 auto;">
+        <aside class="admin-sidebar">
+            <button class="admin-menu-btn active" data-view="dashboard-view"><i class="fa-solid fa-chart-pie"></i> Visão Geral</button>
+            <button class="admin-menu-btn" data-view="highlight-view"><i class="fa-solid fa-star"></i> Ideias em Destaque</button>
+            <button class="admin-menu-btn" data-view="reports-view"><i class="fa-solid fa-flag"></i> Denúncias</button>
+            <button class="admin-menu-btn" data-view="announcements-view"><i class="fa-solid fa-bullhorn"></i> Mural de Avisos</button>
+            <button class="admin-menu-btn" data-view="users-view"><i class="fa-solid fa-users"></i> Usuários</button>
+        </aside>
+
+        <main class="admin-content">
+            <!-- Dashboard View -->
+            <section id="dashboard-view" class="view-section active">
+                <h2 style="margin-bottom: 1.5rem;">Visão Geral da Plataforma</h2>
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fa-solid fa-lightbulb"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-total-ideias">0</h3>
+                            <p>Total de Ideias</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--highlight); background: rgba(217, 70, 239, 0.1);"><i class="fa-solid fa-star"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-destaques">0</h3>
+                            <p>Em Destaque (50+)</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="color: var(--downvote-color); background: rgba(239, 68, 68, 0.1);"><i class="fa-solid fa-flag"></i></div>
+                        <div class="stat-info">
+                            <h3 id="stat-denuncias">0</h3>
+                            <p>Posts Denunciados</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Highlights View -->
+            <section id="highlight-view" class="view-section">
+                <h2 style="margin-bottom: 1.5rem;">Ideias em Destaque (Aguardando Resposta)</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Aqui estão as ideias que atingiram mais de 50 votos. Como direção, você pode responder oficialmente, e sua resposta será fixada no topo dos comentários.</p>
+                <input type="text" id="highlight-search" class="admin-search-input" placeholder="Buscar por título, autor ou palavra-chave...">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Ideia</th>
+                                <th>Autor</th>
+                                <th>Votos</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="highlight-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Reports View -->
+            <section id="reports-view" class="view-section">
+                <h2 style="margin-bottom: 1.5rem;">Gestão de Denúncias</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Posts que os alunos denunciaram. Avalie se violam as regras e exclua-os, ou ignore a denúncia.</p>
+                <input type="text" id="report-search" class="admin-search-input" placeholder="Buscar denúncias...">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40%;">Conteúdo Denunciado</th>
+                                <th style="width: 30%;">Motivos</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reports-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Announcements View -->
+            <section id="announcements-view" class="view-section">
+                <h2 style="margin-bottom: 1.5rem;">Publicar Aviso da Coordenação</h2>
+                <div class="card" style="padding: 2rem;">
+                    <form id="announcement-form">
+                        <div class="form-group">
+                            <label>Tipo de Aviso</label>
+                            <select id="ann-type">
+                                <option value="official">Comunicado Oficial</option>
+                                <option value="milestone">Conquista / Novidade</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Título Curto</label>
+                            <input type="text" id="ann-title" placeholder="Ex: Biblioteca Fechada" required maxlength="30">
+                        </div>
+                        <div class="form-group">
+                            <label>Mensagem</label>
+                            <textarea id="ann-desc" rows="3" placeholder="Escreva a mensagem que aparecerá para os alunos..." required maxlength="150"></textarea>
+                        </div>
+                        <div class="form-actions" style="margin-top: 1rem;">
+                            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Publicar Aviso</button>
+                        </div>
+                    </form>
+                </div>
+
+                <h3 style="margin-top: 2rem; margin-bottom: 1rem;">Avisos Ativos</h3>
+                <div id="active-announcements" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <!-- Populated via JS -->
+                </div>
+            </section>
+
+            <!-- Users View -->
+            <section id="users-view" class="view-section">
+                <h2 style="margin-bottom: 1.5rem;">Gestão de Usuários</h2>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Veja os alunos e professores cadastrados no sistema. Você pode aplicar banimentos para restringir o acesso.</p>
+                <input type="text" id="user-search" class="admin-search-input" placeholder="Buscar por nome ou e-mail...">
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>E-mail</th>
+                                <th>Turma / Curso</th>
+                                <th>Status</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-tbody">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Official Reply Modal -->
+    <div id="reply-modal" class="modal-overlay">
+        <div class="modal auth-modal-box">
+            <div class="modal-header">
+                <h2>Resposta Oficial</h2>
+                <button class="close-btn" onclick="closeReplyModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body auth-body">
+                <p style="margin-bottom: 1rem; color: var(--text-muted); font-size: 0.95rem;">Sua resposta será fixada no post como um comunicado da direção.</p>
+                <form id="reply-form">
+                    <div class="form-group">
+                        <label>Status da Ideia</label>
+                        <select id="reply-status" style="margin-bottom: 1rem;">
+                            <option value="none">Manter sem status</option>
+                            <option value="analysis">Em Análise</option>
+                            <option value="approved">Aprovada</option>
+                            <option value="rejected">Rejeitada</option>
+                            <option value="done">Concluída</option>
+                        </select>
+                        <textarea id="reply-text" rows="4" placeholder="Ex: A direção aprovou a ideia e o orçamento já foi solicitado..." required></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-outline" onclick="closeReplyModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Enviar Resposta</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- We will use a dedicated admin.js file -->
+    <script src="admin.js"></script>
+</body>
+</html>

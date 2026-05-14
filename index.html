@@ -23,9 +23,25 @@
             
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <!-- Theme Toggle -->
-                <button id="theme-toggle" class="action-btn" title="Alternar Tema" style="font-size: 1.25rem;">
+                <button id="theme-toggle" class="action-btn" title="Alternar Tema" aria-label="Alternar tema claro e escuro" style="font-size: 1.25rem;">
                     <!-- Injected by JS: Moon if Light theme, Sun if Dark Theme -->
                 </button>
+
+                <div class="dropdown" id="notification-bell-container" style="display: none;">
+                    <button class="action-btn" id="notification-btn" aria-label="Ver notificações" onclick="toggleNotificationDropdown(event)" style="font-size: 1.25rem; position: relative;">
+                        <i class="fa-solid fa-bell"></i>
+                        <span id="notification-badge" class="notification-badge" style="display: none;">0</span>
+                    </button>
+                    <div class="dropdown-content notification-dropdown" id="notification-dropdown">
+                        <div class="notification-header">
+                            <h4>Notificações</h4>
+                            <button class="mark-read-btn" onclick="markAllNotificationsRead()"><i class="fa-solid fa-check-double"></i></button>
+                        </div>
+                        <ul id="notification-list" class="notification-list">
+                            <!-- Populated via JS -->
+                        </ul>
+                    </div>
+                </div>
 
                 <div class="user-profile" id="user-profile-container">
                     <!-- Injected via JS -->
@@ -37,6 +53,13 @@
     <main class="container layout">
         <!-- Sidebar / Ranking -->
         <aside class="sidebar">
+            <div class="card announcements-card">
+                <h2 class="card-title announcements-title"><i class="fa-solid fa-bullhorn highlight-icon"></i> Avisos da Coordenação</h2>
+                <ul id="announcements-list" class="announcements-list">
+                    <!-- Populated via JS -->
+                </ul>
+            </div>
+
             <div class="card ranking-card">
                 <h2 class="card-title"><i class="fa-solid fa-trophy highlight-icon"></i> Ranking Top Ideias</h2>
                 <ul id="ranking-list" class="ranking-list">
@@ -61,13 +84,17 @@
                 </div>
             </div>
 
-            <div class="feed-filters">
+            <div class="feed-filters" style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
                 <button class="filter-btn active" data-sort="hot"><i class="fa-solid fa-fire"></i> Mais Votados</button>
                 <button class="filter-btn" data-sort="new"><i class="fa-solid fa-certificate"></i> Mais Recentes</button>
             </div>
 
             <div id="posts-container" class="posts-container">
                 <!-- Posts populated via JS -->
+            </div>
+            
+            <div id="load-more-container" style="text-align: center; margin-bottom: 2rem; display: none;">
+                <button id="load-more-btn" class="btn btn-outline" style="margin: 0 auto; padding: 0.8rem 2rem;">Carregar mais ideias <i class="fa-solid fa-chevron-down"></i></button>
             </div>
         </section>
     </main>
@@ -76,8 +103,8 @@
     <div id="post-modal" class="modal-overlay">
         <div class="modal">
             <div class="modal-header">
-                <h2>Criar nova postagem</h2>
-                <button class="close-btn" id="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+                <h2 id="post-modal-title">Criar nova postagem</h2>
+                <button class="close-btn" id="close-modal-btn" aria-label="Fechar modal"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body">
                 <form id="create-post-form">
@@ -89,10 +116,7 @@
                         <label for="post-desc">Descrição detalhada</label>
                         <textarea id="post-desc" rows="5" placeholder="Explique mais sobre sua ideia ou sugestão..." required minlength="10" maxlength="1000"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="post-tags">Tags (Opcional)</label>
-                        <input type="text" id="post-tags" placeholder="Ex: Infraestrutura, Biblioteca, Esportes (separadas por vírgula)" maxlength="50">
-                    </div>
+
                     <div class="form-actions">
                         <button type="button" class="btn btn-outline" id="cancel-post-btn">Cancelar</button>
                         <button type="submit" class="btn btn-primary">Publicar Ideia</button>
@@ -108,7 +132,7 @@
             <div class="modal-header auth-tabs" style="position: relative;">
                 <button class="tab-btn active" data-tab="login">Entrar</button>
                 <button class="tab-btn" data-tab="register">Cadastrar</button>
-                <button class="close-btn" id="close-auth-btn" style="position: absolute; right: 1rem; top: 1rem; z-index: 10;"><i class="fa-solid fa-xmark"></i></button>
+                <button class="close-btn" id="close-auth-btn" aria-label="Fechar" style="position: absolute; right: 1rem; top: 1rem; z-index: 10;"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body auth-body">
                 
@@ -116,11 +140,14 @@
                 <form id="login-form" class="auth-form active">
                     <div class="form-group">
                         <label for="login-email">E-mail Institucional</label>
-                        <input type="email" id="login-email" placeholder="aluno@escola.edu.br" required>
+                        <input type="email" id="login-email" placeholder="Ex: 0000111888sp@aluno.educacao.sp.gov.br" required>
                     </div>
                     <div class="form-group">
                         <label for="login-password">Senha</label>
-                        <input type="password" id="login-password" placeholder="••••••••" required>
+                        <div class="password-wrapper" style="position: relative;">
+                            <input type="password" id="login-password" placeholder="••••••••" required style="width: 100%;">
+                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('login-password')" aria-label="Mostrar senha" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px;"><i class="fa-solid fa-eye"></i></button>
+                        </div>
                     </div>
                     <div class="form-actions" style="margin-top: 2rem;">
                         <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Entrar na Plataforma</button>
@@ -137,7 +164,7 @@
                     </div>
                     <div class="form-group">
                         <label for="reg-email">E-mail Institucional</label>
-                        <input type="email" id="reg-email" placeholder="lucas@escola.edu.br" required>
+                        <input type="email" id="reg-email" placeholder="Ex: 0000111888sp@aluno.educacao.sp.gov.br" required>
                     </div>
                     
                     <div class="form-row">
@@ -174,7 +201,10 @@
 
                     <div class="form-group">
                         <label for="reg-password">Senha Segura</label>
-                        <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required minlength="6">
+                        <div class="password-wrapper" style="position: relative;">
+                            <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" required minlength="6" style="width: 100%;">
+                            <button type="button" class="password-toggle" onclick="togglePasswordVisibility('reg-password')" aria-label="Mostrar senha" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px;"><i class="fa-solid fa-eye"></i></button>
+                        </div>
                     </div>
                     
                     <div class="form-actions" style="margin-top: 1.5rem;">
@@ -186,60 +216,66 @@
         </div>
     </div>
 
-    <!-- Report Modal -->
-    <div id="report-modal" class="modal-overlay">
+    <!-- Email Verification Modal -->
+    <div id="verification-modal" class="modal-overlay">
         <div class="modal auth-modal-box">
             <div class="modal-header">
-                <h2>Denunciar Postagem</h2>
-                <button class="close-btn" onclick="closeReportModal()"><i class="fa-solid fa-xmark"></i></button>
+                <h2>Verificação de E-mail</h2>
+                <button class="close-btn" id="close-ver-btn" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="modal-body auth-body">
-                <form id="report-form">
-                    <input type="hidden" id="report-post-id">
-                    <div class="form-group">
-                        <label for="report-reason">Motivo da denúncia</label>
-                        <textarea id="report-reason" rows="4" placeholder="Ex: Palavreado ofensivo, agressão, spam..." required></textarea>
+                <p style="margin-bottom: 2rem; color: var(--text-muted); text-align: center; font-size: 0.95rem;">
+                    Enviamos um código de 6 dígitos para o seu e-mail institucional. Insira o código abaixo para confirmar sua conta.
+                </p>
+                <form id="verification-form">
+                    <div class="form-group" style="text-align: center;">
+                        <input type="text" id="ver-code" placeholder="000000" maxlength="6" style="font-size: 2.5rem; letter-spacing: 0.5rem; text-align: center; font-weight: 800;" required>
                     </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-outline" onclick="closeReportModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary" style="background: linear-gradient(135deg, var(--downvote-color), #b91c1c);">Enviar Denúncia</button>
+                    
+                    <div class="form-actions" style="margin-top: 1.5rem; flex-direction: column; gap: 1rem;">
+                        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Confirmar Código</button>
+                        <button type="button" class="btn btn-outline" id="resend-code-btn" style="width: 100%; justify-content: center;" disabled>Reenviar código</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- Edit Profile Modal -->
-    <div id="edit-profile-modal" class="modal-overlay">
-        <div class="modal auth-modal-box">
+    <!-- Confirm Delete Modal -->
+    <div id="confirm-delete-modal" class="modal-overlay">
+        <div class="modal auth-modal-box" style="max-width: 400px !important;">
             <div class="modal-header">
-                <h2>Editar Perfil</h2>
-                <button class="close-btn" onclick="closeEditProfileModal()"><i class="fa-solid fa-xmark"></i></button>
+                <h2>Excluir Postagem</h2>
+                <button class="close-btn" onclick="closeDeleteModal()" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="modal-body auth-body">
-                <form id="edit-profile-form">
+            <div class="modal-body auth-body" style="padding: 1.5rem !important;">
+                <p style="margin-bottom: 1.5rem; color: var(--text-muted); font-size: 1rem;">
+                    Tem certeza de que deseja excluir esta postagem? Esta ação não pode ser desfeita.
+                </p>
+                <div class="form-actions" style="margin-top: 0; justify-content: flex-end; gap: 1rem;">
+                    <button class="btn btn-outline" onclick="closeDeleteModal()">Cancelar</button>
+                    <button class="btn btn-primary" id="confirm-delete-btn" style="background: var(--downvote-color); box-shadow: none;">Excluir</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="report-modal" class="modal-overlay">
+        <div class="modal auth-modal-box" style="max-width: 450px !important;">
+            <div class="modal-header">
+                <h2>Denunciar Postagem</h2>
+                <button class="close-btn" onclick="closeReportModal()" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body auth-body" style="padding: 1.5rem !important;">
+                <form id="report-form">
                     <div class="form-group">
-                        <label for="edit-name">Nome de Exibição</label>
-                        <input type="text" id="edit-name" required>
+                        <label for="report-reason">Motivo da denúncia</label>
+                        <textarea id="report-reason" rows="3" placeholder="Ex: palavreado ofensivo, spam, conteúdo irrelevante..." required maxlength="200"></textarea>
                     </div>
-                    <div class="form-group">
-                        <label for="edit-course">Curso Técnico</label>
-                        <select id="edit-course" required>
-                            <option value="Ensino Regular (Sem Curso)">Ensino Regular (Sem Curso)</option>
-                            <option value="Informática">Informática</option>
-                            <option value="Administração">Administração</option>
-                            <option value="Enfermagem">Enfermagem</option>
-                            <option value="Eletrotécnica">Eletrotécnica</option>
-                            <option value="Mecânica">Mecânica</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="edit-password">Nova Senha <span style="font-size: 0.8rem; color: var(--text-muted);">(opcional)</span></label>
-                        <input type="password" id="edit-password" placeholder="Preencha apenas se quiser alterar (min 6 carac.)" minlength="6">
-                    </div>
-                    <div class="form-actions" style="margin-top: 2rem;">
-                        <button type="button" class="btn btn-outline" onclick="closeEditProfileModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    <div class="form-actions" style="margin-top: 1rem; justify-content: flex-end; gap: 1rem;">
+                        <button type="button" class="btn btn-outline" onclick="closeReportModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Enviar Denúncia</button>
                     </div>
                 </form>
             </div>
