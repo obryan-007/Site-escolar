@@ -380,6 +380,13 @@ loginForm.addEventListener('submit', (e) => {
 
     localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
     currentUser = mockUser;
+
+    // Save login user to users list if not registered before
+    if (!usersList.find(u => u.uid === mockUser.uid)) {
+        usersList.push(mockUser);
+        localStorage.setItem(USERS_LIST_KEY, JSON.stringify(usersList));
+    }
+
     userNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + currentUser.uid)) || [];
     if(typeof renderNotificationsUI === 'function') renderNotificationsUI();
     updateAuthUI();
@@ -593,7 +600,6 @@ function renderRanking() {
 }
 
 // Voting logic
-// Voting logic
 window.handleVote = function (id, type) {
     if (!currentUser) {
         showAuthModal();
@@ -675,6 +681,13 @@ document.getElementById('report-form').addEventListener('submit', (e) => {
         const post = posts.find(p => p.id === postToReportId);
         if (post) {
             if (!post.reports) post.reports = [];
+            // Prevent duplicate reports from same user
+            const alreadyReported = post.reports.some(r => r.by === currentUser.uid);
+            if (alreadyReported) {
+                closeReportModal();
+                showToast("Aviso", "Você já denunciou este post anteriormente.", "info");
+                return;
+            }
             post.reports.push({ reason, by: currentUser.uid, date: new Date().toISOString() });
             savePosts();
         }
@@ -797,11 +810,9 @@ window.addComment = function(e, postId) {
 
     savePosts();
     input.value = '';
-    renderComments(postId);
 
-    // Update the counter on the button without full re-render
-    renderPosts(); 
-    // Wait, renderPosts overrides comments section display, so re-open it
+    // Re-render the post list to update comment counter, then re-open comments
+    renderPosts();
     toggleCommentsSection(postId);
 }
 
@@ -833,7 +844,8 @@ window.likeComment = function(postId, commentId) {
 
 window.pinComment = function(postId, commentId) {
     const post = posts.find(p => p.id === postId);
-    // Tolggle Pin
+    if (!post) return;
+    // Toggle Pin
     if (post.pinnedCommentId === commentId) {
         post.pinnedCommentId = null;
     } else {

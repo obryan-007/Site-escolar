@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="dark">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -129,6 +129,13 @@
             margin-bottom: 4px;
         }
     </style>
+    <script>
+        // Sync saved theme on load (before render to avoid flash)
+        (function() {
+            const t = localStorage.getItem('voz_do_aluno_theme');
+            if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+        })();
+    </script>
 </head>
 <body>
     <header class="navbar">
@@ -316,7 +323,53 @@
 
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-inner" style="max-width: 1400px;">
+            <!-- Brand -->
+            <div class="footer-brand footer-col">
+                <div class="logo">
+                    <i class="fa-solid fa-shield-halved highlight-icon"></i>
+                    <h2 style="font-size:1.4rem; font-weight:800; background:linear-gradient(to right, var(--text-main), var(--text-muted)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Painel Admin</h2>
+                </div>
+                <p>Painel de gestão da plataforma Voz do Aluno. Gerencie ideias, denúncias, avisos e usuários de forma centralizada.</p>
+            </div>
+
+            <!-- Navegação -->
+            <div class="footer-col">
+                <h4><i class="fa-solid fa-compass" style="color:var(--primary-medium);"></i> Navegação</h4>
+                <ul class="footer-links">
+                    <li><a href="index.html"><i class="fa-solid fa-arrow-left"></i> Voltar ao Site</a></li>
+                    <li><button onclick="document.querySelector('[data-view=&quot;dashboard-view&quot;]').click()"><i class="fa-solid fa-chart-pie"></i> Visão Geral</button></li>
+                    <li><button onclick="document.querySelector('[data-view=&quot;users-view&quot;]').click()"><i class="fa-solid fa-users"></i> Usuários</button></li>
+                </ul>
+            </div>
+
+            <!-- Info -->
+            <div class="footer-col">
+                <h4><i class="fa-solid fa-circle-info" style="color:var(--highlight);"></i> Informações</h4>
+                <ul class="footer-links">
+                    <li><a href="#"><i class="fa-solid fa-shield-halved"></i> Regras da Comunidade</a></li>
+                    <li><a href="#"><i class="fa-solid fa-lock"></i> Privacidade</a></li>
+                    <li><a href="#"><i class="fa-solid fa-envelope"></i> Suporte Técnico</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="footer-divider">
+
+        <div class="footer-bottom" style="max-width: 1400px;">
+            <p>© <span id="footer-year"></span> <strong>Voz do Aluno</strong>. Feito com <i class="fa-solid fa-heart" style="color:var(--highlight); font-size:0.75rem;"></i> para melhorar nossa escola.</p>
+            <div class="footer-badges">
+                <span class="footer-badge"><i class="fa-solid fa-lock"></i> Dados locais</span>
+                <span class="footer-badge"><i class="fa-solid fa-users"></i> Comunidade segura</span>
+                <span class="footer-badge"><i class="fa-solid fa-star"></i> Ideias valorizadas</span>
+            </div>
+        </div>
+    </footer>
+
     <!-- We will use a dedicated admin.js file -->
     <script src="admin.js"></script>
+    <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
 </body>
 </html>

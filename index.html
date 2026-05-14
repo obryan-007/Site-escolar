@@ -285,7 +285,54 @@
     <!-- Notification Toast -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Footer -->
+    <footer class="site-footer">
+        <div class="footer-inner">
+            <!-- Brand -->
+            <div class="footer-brand footer-col">
+                <div class="logo">
+                    <i class="fa-solid fa-bullhorn highlight-icon"></i>
+                    <h2 style="font-size:1.4rem; font-weight:800; background:linear-gradient(to right, var(--text-main), var(--text-muted)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Voz do Aluno</h2>
+                </div>
+                <p>Uma plataforma para os alunos compartilharem ideias, sugestões e críticas construtivas — e a coordenação ouvi-las de verdade.</p>
+            </div>
+
+            <!-- Plataforma -->
+            <div class="footer-col">
+                <h4><i class="fa-solid fa-compass" style="color:var(--primary-medium);"></i> Plataforma</h4>
+                <ul class="footer-links">
+                    <li><button onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fa-solid fa-arrow-up"></i> Início</button></li>
+                    <li><button onclick="document.querySelector('[data-sort=&quot;hot&quot;]').click(); window.scrollTo({top:200,behavior:'smooth'})"><i class="fa-solid fa-fire"></i> Mais Votadas</button></li>
+                    <li><button onclick="document.querySelector('[data-sort=&quot;new&quot;]').click(); window.scrollTo({top:200,behavior:'smooth'})"><i class="fa-solid fa-certificate"></i> Mais Recentes</button></li>
+                    <li><button onclick="showAuthModal ? showAuthModal() : null"><i class="fa-solid fa-right-to-bracket"></i> Entrar / Cadastrar</button></li>
+                </ul>
+            </div>
+
+            <!-- Info -->
+            <div class="footer-col">
+                <h4><i class="fa-solid fa-circle-info" style="color:var(--highlight);"></i> Informações</h4>
+                <ul class="footer-links">
+                    <li><a href="#"><i class="fa-solid fa-shield-halved"></i> Regras da Comunidade</a></li>
+                    <li><a href="#"><i class="fa-solid fa-lock"></i> Privacidade</a></li>
+                    <li><a href="#"><i class="fa-solid fa-envelope"></i> Fale com a Gestão</a></li>
+                </ul>
+            </div>
+        </div>
+
+        <hr class="footer-divider">
+
+        <div class="footer-bottom">
+            <p>© <span id="footer-year"></span> <strong>Voz do Aluno</strong>. Feito com <i class="fa-solid fa-heart" style="color:var(--highlight); font-size:0.75rem;"></i> para melhorar nossa escola.</p>
+            <div class="footer-badges">
+                <span class="footer-badge"><i class="fa-solid fa-lock"></i> Dados locais</span>
+                <span class="footer-badge"><i class="fa-solid fa-users"></i> Comunidade segura</span>
+                <span class="footer-badge"><i class="fa-solid fa-star"></i> Ideias valorizadas</span>
+            </div>
+        </div>
+    </footer>
+
     <!-- Scripts -->
     <script src="script.js"></script>
+    <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
 </body>
 </html>
