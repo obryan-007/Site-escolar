@@ -99,6 +99,31 @@
         </section>
     </main>
 
+    <!-- Site Footer -->
+    <footer class="site-footer">
+        <div class="container footer-content">
+            <div class="footer-brand">
+                <div class="logo">
+                    <i class="fa-solid fa-bullhorn highlight-icon"></i>
+                    <h2>Voz do Aluno</h2>
+                </div>
+                <p>Plataforma de escuta ativa e ideias para a nossa escola.</p>
+            </div>
+            
+            <div class="footer-links">
+                <h3>Redes da Escola</h3>
+                <div class="social-icons">
+                    <a href="#" target="_blank" class="social-link" title="Instagram da Escola"><i class="fa-brands fa-instagram"></i></a>
+                    <a href="#" target="_blank" class="social-link" title="Facebook da Escola"><i class="fa-brands fa-facebook-f"></i></a>
+                    <a href="#" target="_blank" class="social-link" title="YouTube da Escola"><i class="fa-brands fa-youtube"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Voz do Aluno. Desenvolvido para a comunidade escolar.</p>
+        </div>
+    </footer>
+
     <!-- Post Creation Modal -->
     <div id="post-modal" class="modal-overlay">
         <div class="modal">
@@ -282,57 +307,55 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="modal-overlay">
+        <div class="modal auth-modal-box" style="max-width: 500px !important;">
+            <div class="modal-header">
+                <h2>Meu Perfil</h2>
+                <button class="close-btn" onclick="closeProfileModal()" aria-label="Fechar"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body auth-body" style="padding: 1.5rem !important;">
+                
+                <!-- Profile Stats -->
+                <div class="profile-stats-container" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                    <div class="stat-box" style="flex: 1; background: var(--bg-color); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                        <i class="fa-solid fa-lightbulb" style="font-size: 1.5rem; color: var(--highlight); margin-bottom: 0.5rem;"></i>
+                        <h3 id="profile-stat-ideas" style="font-size: 1.5rem; margin: 0;">0</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Ideias Criadas</p>
+                    </div>
+                    <div class="stat-box" style="flex: 1; background: var(--bg-color); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                        <i class="fa-solid fa-arrow-up" style="font-size: 1.5rem; color: var(--upvote-color); margin-bottom: 0.5rem;"></i>
+                        <h3 id="profile-stat-votes" style="font-size: 1.5rem; margin: 0;">0</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0;">Votos Recebidos</p>
+                    </div>
+                </div>
+
+                <form id="profile-form">
+                    <div class="form-group">
+                        <label for="profile-name">Nome de Exibição</label>
+                        <input type="text" id="profile-name" required maxlength="50">
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail Institucional</label>
+                        <input type="text" id="profile-email" disabled style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                    <div class="form-group">
+                        <label>Curso / Turma</label>
+                        <input type="text" id="profile-course" disabled style="opacity: 0.7; cursor: not-allowed;">
+                    </div>
+                    <div class="form-actions" style="margin-top: 1rem; justify-content: flex-end; gap: 1rem;">
+                        <button type="button" class="btn btn-outline" onclick="closeProfileModal()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Notification Toast -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Footer -->
-    <footer class="site-footer">
-        <div class="footer-inner">
-            <!-- Brand -->
-            <div class="footer-brand footer-col">
-                <div class="logo">
-                    <i class="fa-solid fa-bullhorn highlight-icon"></i>
-                    <h2 style="font-size:1.4rem; font-weight:800; background:linear-gradient(to right, var(--text-main), var(--text-muted)); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">Voz do Aluno</h2>
-                </div>
-                <p>Uma plataforma para os alunos compartilharem ideias, sugestões e críticas construtivas — e a coordenação ouvi-las de verdade.</p>
-            </div>
-
-            <!-- Plataforma -->
-            <div class="footer-col">
-                <h4><i class="fa-solid fa-compass" style="color:var(--primary-medium);"></i> Plataforma</h4>
-                <ul class="footer-links">
-                    <li><button onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="fa-solid fa-arrow-up"></i> Início</button></li>
-                    <li><button onclick="document.querySelector('[data-sort=&quot;hot&quot;]').click(); window.scrollTo({top:200,behavior:'smooth'})"><i class="fa-solid fa-fire"></i> Mais Votadas</button></li>
-                    <li><button onclick="document.querySelector('[data-sort=&quot;new&quot;]').click(); window.scrollTo({top:200,behavior:'smooth'})"><i class="fa-solid fa-certificate"></i> Mais Recentes</button></li>
-                    <li><button onclick="showAuthModal ? showAuthModal() : null"><i class="fa-solid fa-right-to-bracket"></i> Entrar / Cadastrar</button></li>
-                </ul>
-            </div>
-
-            <!-- Info -->
-            <div class="footer-col">
-                <h4><i class="fa-solid fa-circle-info" style="color:var(--highlight);"></i> Informações</h4>
-                <ul class="footer-links">
-                    <li><a href="#"><i class="fa-solid fa-shield-halved"></i> Regras da Comunidade</a></li>
-                    <li><a href="#"><i class="fa-solid fa-lock"></i> Privacidade</a></li>
-                    <li><a href="#"><i class="fa-solid fa-envelope"></i> Fale com a Gestão</a></li>
-                </ul>
-            </div>
-        </div>
-
-        <hr class="footer-divider">
-
-        <div class="footer-bottom">
-            <p>© <span id="footer-year"></span> <strong>Voz do Aluno</strong>. Feito com <i class="fa-solid fa-heart" style="color:var(--highlight); font-size:0.75rem;"></i> para melhorar nossa escola.</p>
-            <div class="footer-badges">
-                <span class="footer-badge"><i class="fa-solid fa-lock"></i> Dados locais</span>
-                <span class="footer-badge"><i class="fa-solid fa-users"></i> Comunidade segura</span>
-                <span class="footer-badge"><i class="fa-solid fa-star"></i> Ideias valorizadas</span>
-            </div>
-        </div>
-    </footer>
-
     <!-- Scripts -->
     <script src="script.js"></script>
-    <script>document.getElementById('footer-year').textContent = new Date().getFullYear();</script>
 </body>
 </html>

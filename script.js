@@ -210,7 +210,65 @@ window.toggleProfileDropdown = function(e) {
 }
 
 window.editProfile = function() {
-    showToast("Aviso", "Função de edição de perfil em desenvolvimento!", "info");
+    if (!currentUser) return;
+    document.getElementById('profile-modal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+
+    // Populate data
+    document.getElementById('profile-name').value = currentUser.name;
+    document.getElementById('profile-email').value = currentUser.email;
+    document.getElementById('profile-course').value = (currentUser.className && currentUser.className !== 'Professor' ? currentUser.className + ' | ' : '') + currentUser.course;
+
+    // Calculate stats
+    let userPosts = posts.filter(p => p.authorUid === currentUser.uid);
+    let totalVotes = userPosts.reduce((acc, p) => acc + (p.upvotes - p.downvotes), 0);
+
+    document.getElementById('profile-stat-ideas').textContent = userPosts.length;
+    document.getElementById('profile-stat-votes').textContent = totalVotes;
+}
+
+window.closeProfileModal = function() {
+    document.getElementById('profile-modal').classList.remove('active');
+    document.body.style.overflow = 'auto';
+}
+
+const profileForm = document.getElementById('profile-form');
+if (profileForm) {
+    profileForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const newName = document.getElementById('profile-name').value.trim();
+        if (newName && newName !== currentUser.name) {
+            currentUser.name = newName;
+            localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+            
+            // Update user in usersList
+            const userIndex = usersList.findIndex(u => u.uid === currentUser.uid);
+            if(userIndex !== -1) {
+                usersList[userIndex].name = newName;
+                localStorage.setItem(USERS_LIST_KEY, JSON.stringify(usersList));
+            }
+
+            // Update all past posts and comments by this user
+            posts.forEach(p => {
+                if(p.authorUid === currentUser.uid) {
+                    p.author = newName;
+                }
+                if(p.comments) {
+                    p.comments.forEach(c => {
+                        if(c.authorUid === currentUser.uid) {
+                            c.author = newName;
+                        }
+                    });
+                }
+            });
+            savePosts();
+
+            updateAuthUI();
+            renderPosts();
+            showToast("Sucesso", "Perfil atualizado com sucesso!", "success");
+        }
+        closeProfileModal();
+    });
 }
 
 window.logout = function () {
@@ -380,13 +438,6 @@ loginForm.addEventListener('submit', (e) => {
 
     localStorage.setItem(USER_KEY, JSON.stringify(mockUser));
     currentUser = mockUser;
-
-    // Save login user to users list if not registered before
-    if (!usersList.find(u => u.uid === mockUser.uid)) {
-        usersList.push(mockUser);
-        localStorage.setItem(USERS_LIST_KEY, JSON.stringify(usersList));
-    }
-
     userNotifications = JSON.parse(localStorage.getItem(NOTIFICATIONS_KEY + '_' + currentUser.uid)) || [];
     if(typeof renderNotificationsUI === 'function') renderNotificationsUI();
     updateAuthUI();
@@ -397,6 +448,11 @@ loginForm.addEventListener('submit', (e) => {
 // --- Core App Logic ---
 function savePosts() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
+}
+
+function isInnovator(uid) {
+    if (!uid) return false;
+    return posts.some(p => p.authorUid === uid && p.upvotes >= HIGHLIGHT_THRESHOLD);
 }
 
 function renderPosts() {
@@ -476,6 +532,7 @@ function renderPosts() {
                 <div class="post-meta" style="justify-content: space-between;">
                     <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
                         <span class="post-author"><i class="fa-solid fa-user-circle"></i> ${post.author}</span>
+                        ${isInnovator(post.authorUid) ? `<span class="innovator-badge" title="Ideia com 50+ votos!"><i class="fa-solid fa-rocket"></i> Inovador</span>` : ''}
                         ${post.role === 'professor' || (post.authorMeta && post.authorMeta.includes('Professor')) ? `<span class="teacher-badge"><i class="fa-solid fa-graduation-cap"></i> PROFESSOR</span>` : ''}
                         ${post.authorMeta && !(post.role === 'professor' || (post.authorMeta && post.authorMeta.includes('Professor'))) ? `<span style="color: var(--primary-medium); font-weight: 600;">[${post.authorMeta}]</span>` : ''}
                         <span>• ${dateStr}</span>
@@ -600,6 +657,7 @@ function renderRanking() {
 }
 
 // Voting logic
+// Voting logic
 window.handleVote = function (id, type) {
     if (!currentUser) {
         showAuthModal();
@@ -681,13 +739,6 @@ document.getElementById('report-form').addEventListener('submit', (e) => {
         const post = posts.find(p => p.id === postToReportId);
         if (post) {
             if (!post.reports) post.reports = [];
-            // Prevent duplicate reports from same user
-            const alreadyReported = post.reports.some(r => r.by === currentUser.uid);
-            if (alreadyReported) {
-                closeReportModal();
-                showToast("Aviso", "Você já denunciou este post anteriormente.", "info");
-                return;
-            }
             post.reports.push({ reason, by: currentUser.uid, date: new Date().toISOString() });
             savePosts();
         }
@@ -751,6 +802,7 @@ window.renderComments = function(postId) {
                     <div class="comment-author-row">
                         <span>
                             <span class="comment-author">${comment.author}</span>
+                            ${isInnovator(comment.authorUid) ? `<span class="innovator-badge" title="Ideia com 50+ votos!"><i class="fa-solid fa-rocket"></i> Inovador</span>` : ''}
                             ${comment.role === 'professor' || (comment.authorMeta && comment.authorMeta.includes('Professor')) ? `<span class="teacher-badge-small"><i class="fa-solid fa-graduation-cap"></i> PROFESSOR</span>` : ''}
                             ${isPinned ? '<span class="pinned-badge"><i class="fa-solid fa-thumbtack"></i> Fixado</span>' : ''}
                         </span>
@@ -810,9 +862,11 @@ window.addComment = function(e, postId) {
 
     savePosts();
     input.value = '';
+    renderComments(postId);
 
-    // Re-render the post list to update comment counter, then re-open comments
-    renderPosts();
+    // Update the counter on the button without full re-render
+    renderPosts(); 
+    // Wait, renderPosts overrides comments section display, so re-open it
     toggleCommentsSection(postId);
 }
 
@@ -844,8 +898,7 @@ window.likeComment = function(postId, commentId) {
 
 window.pinComment = function(postId, commentId) {
     const post = posts.find(p => p.id === postId);
-    if (!post) return;
-    // Toggle Pin
+    // Tolggle Pin
     if (post.pinnedCommentId === commentId) {
         post.pinnedCommentId = null;
     } else {

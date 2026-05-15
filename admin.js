@@ -413,7 +413,7 @@ window.toggleBanUser = function(email) {
 }
 
 // Search listener for users
-document.getElementById('user-search')?.addEventListener('input', () => renderUsers());
+document.getElementById('user-search')?.addEventListener('input', renderUsers);
 
 // ─── Initial Render ───────────────────────────────────────────────────────────
 updateDashboard();
