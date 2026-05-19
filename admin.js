@@ -31,6 +31,8 @@ function showToast(title, message, type = 'info') {
     const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = 'toast';
+    toast.style.cursor = 'pointer'; // Make it obvious it's clickable
+    
     let icon  = 'fa-info-circle';
     let color = 'var(--primary-medium)';
     if (type === 'success') { icon = 'fa-check-circle';  color = 'var(--upvote-color)';   }
@@ -38,15 +40,29 @@ function showToast(title, message, type = 'info') {
 
     toast.innerHTML = `
         <i class="fa-solid ${icon} toast-icon" style="color: ${color};"></i>
-        <div class="toast-content">
+        <div class="toast-content" style="flex: 1;">
             <h4 style="color: ${color};">${title}</h4>
             <p>${message}</p>
         </div>
+        <i class="fa-solid fa-xmark" style="color: var(--text-muted); font-size: 1.2rem; margin-left: 10px;"></i>
     `;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
+    
+    toast.addEventListener('click', () => {
         toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 400);
+        setTimeout(() => {
+            if(toastContainer.contains(toast)) toast.remove();
+        }, 400);
+    });
+
+    toastContainer.appendChild(toast);
+    
+    setTimeout(() => {
+        if(toastContainer.contains(toast)) {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                if(toastContainer.contains(toast)) toast.remove();
+            }, 400);
+        }
     }, 4000);
 }
 

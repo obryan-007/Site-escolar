@@ -1046,8 +1046,10 @@ filterBtns.forEach(btn => {
 
 // Toast Notification
 window.showToast = function(title, message, type='info') {
+    const toastContainer = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = 'toast';
+    toast.style.cursor = 'pointer'; // Make it obvious it's clickable
     
     let icon = 'fa-paper-plane';
     if(type === 'error') icon = 'fa-triangle-exclamation';
@@ -1055,17 +1057,29 @@ window.showToast = function(title, message, type='info') {
 
     toast.innerHTML = `
         <i class="fa-solid ${icon} toast-icon" style="${type === 'error' ? 'color: var(--downvote-color);' : ''}"></i>
-        <div class="toast-content">
+        <div class="toast-content" style="flex: 1;">
             <h4 style="${type === 'error' ? 'color: var(--downvote-color);' : ''}">${title}</h4>
             <p>${message}</p>
         </div>
+        <i class="fa-solid fa-xmark" style="color: var(--text-muted); font-size: 1.2rem; margin-left: 10px;"></i>
     `;
+
+    toast.addEventListener('click', () => {
+        toast.classList.add('hide');
+        setTimeout(() => {
+            if(toastContainer.contains(toast)) toast.remove();
+        }, 400);
+    });
 
     toastContainer.appendChild(toast);
 
     setTimeout(() => {
-        toast.classList.add('hide');
-        setTimeout(() => toast.remove(), 400);
+        if(toastContainer.contains(toast)) {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                if(toastContainer.contains(toast)) toast.remove();
+            }, 400);
+        }
     }, 6000);
 }
 
