@@ -154,7 +154,6 @@ body {
 
 .highlight-icon {
     color: var(--highlight);
-    animation: floatAction 3s ease-in-out infinite;
     font-size: 1.4rem;
 }
 
