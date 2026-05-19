@@ -87,6 +87,66 @@ function updateDashboard() {
     renderHighlights();
     renderReports();
     renderAnnouncements();
+    renderCharts();
+}
+
+let coursesChartInstance = null;
+let statusChartInstance = null;
+
+function renderCharts() {
+    const coursesCanvas = document.getElementById('coursesChart');
+    const statusCanvas = document.getElementById('statusChart');
+    if (!coursesCanvas || !statusCanvas || typeof Chart === 'undefined') return;
+
+    // Count by course
+    const courseCount = {};
+    posts.forEach(p => {
+        let meta = p.authorMeta || 'Outros';
+        if (meta.includes('|')) {
+            meta = meta.split('|')[1].trim();
+        }
+        if (meta === 'Professor/Direção' || meta === 'Professor' || meta === 'Aluno' || meta === 'Ensino Regular (Sem Curso)') meta = 'Ensino Regular';
+        courseCount[meta] = (courseCount[meta] || 0) + 1;
+    });
+
+    // Count by Status (>50 votes)
+    const statusCount = { 'Aguardando': 0, 'Em Análise': 0, 'Aprovada': 0, 'Rejeitada': 0, 'Concluída': 0 };
+    posts.forEach(p => {
+        if ((p.upvotes - p.downvotes) >= 50) {
+            if (!p.status || p.status === 'none') statusCount['Aguardando']++;
+            else if (p.status === 'analysis') statusCount['Em Análise']++;
+            else if (p.status === 'approved') statusCount['Aprovada']++;
+            else if (p.status === 'rejected') statusCount['Rejeitada']++;
+            else if (p.status === 'done') statusCount['Concluída']++;
+        }
+    });
+
+    if (coursesChartInstance) coursesChartInstance.destroy();
+    coursesChartInstance = new Chart(coursesCanvas, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(courseCount),
+            datasets: [{
+                data: Object.values(courseCount),
+                backgroundColor: ['#D946EF', '#8B5CF6', '#3B82F6', '#10B981', '#F59E0B', '#64748B']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#94a3b8' } } } }
+    });
+
+    if (statusChartInstance) statusChartInstance.destroy();
+    statusChartInstance = new Chart(statusCanvas, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(statusCount),
+            datasets: [{
+                label: 'Ideias',
+                data: Object.values(statusCount),
+                backgroundColor: ['#64748B', '#F59E0B', '#10B981', '#EF4444', '#3B82F6']
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { color: '#94a3b8', stepSize: 1 } }, x: { ticks: { color: '#94a3b8' } } }, plugins: { legend: { display: false } } }
+    });
 }
 
 // ─── Highlights ───────────────────────────────────────────────────────────────
@@ -147,6 +207,35 @@ function renderHighlights() {
 
 // Search listener for highlights
 document.getElementById('highlight-search')?.addEventListener('input', renderHighlights);
+
+window.exportHighlightsCSV = function() {
+    const highlighted = posts.filter(p => (p.upvotes - p.downvotes) >= 50);
+    if (highlighted.length === 0) {
+        showToast('Aviso', 'Não há ideias em destaque para exportar.', 'error');
+        return;
+    }
+    
+    let csvContent = "data:text/csv;charset=utf-8,%EF%BB%BF"; // with BOM for Excel UTF-8
+    csvContent += "Titulo;Autor;Votos;Status;Data\n"; // semicolon for Excel pt-br
+    
+    highlighted.forEach(p => {
+        const title = p.title.replace(/;/g, ",").replace(/\n/g, " ");
+        const author = p.author.replace(/;/g, ",");
+        const votes = p.upvotes - p.downvotes;
+        const status = p.status || 'none';
+        const date = new Date(p.createdAt).toLocaleDateString('pt-BR');
+        csvContent += `${title};${author};${votes};${status};${date}\n`;
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "ideias_aprovadas.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Sucesso', 'Download do relatório iniciado!', 'success');
+}
 
 // ─── Reply Modal ──────────────────────────────────────────────────────────────
 window.openReplyModal = function(id) {
@@ -284,14 +373,22 @@ function renderAnnouncements() {
                     <div style="font-size:0.85rem; color:var(--text-muted);">${ann.text}</div>
                     <div style="font-size:0.75rem; color:var(--primary-medium); margin-top:4px;">${dateStr}</div>
                 </div>
-                <button class="btn btn-outline" style="padding:0.4rem 0.8rem;"
-                    onclick="deleteAnnouncement('${ann.id}')">
-                    <i class="fa-solid fa-trash"></i>
-                </button>
+                <div style="display: flex;">
+                    <button class="btn btn-outline" style="padding:0.4rem 0.8rem; margin-right: 5px;"
+                        onclick="editAnnouncement('${ann.id}')">
+                        <i class="fa-solid fa-pen"></i>
+                    </button>
+                    <button class="btn btn-outline" style="padding:0.4rem 0.8rem;"
+                        onclick="deleteAnnouncement('${ann.id}')">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
             </div>
         `;
     });
 }
+
+let editingAnnId = null;
 
 document.getElementById('announcement-form').addEventListener('submit', (e) => {
     e.preventDefault();
@@ -300,19 +397,40 @@ document.getElementById('announcement-form').addEventListener('submit', (e) => {
     const type  = document.getElementById('ann-type').value;
 
     if (title && text) {
-        announcements.unshift({
-            id:    'a_' + Date.now(),
-            type:  type,
-            title: title,
-            text:  text,
-            date:  new Date().toISOString()
-        });
+        if (editingAnnId) {
+            const ann = announcements.find(a => a.id === editingAnnId);
+            if (ann) {
+                ann.title = title;
+                ann.text = text;
+                ann.type = type;
+            }
+            editingAnnId = null;
+        } else {
+            announcements.unshift({
+                id:    'a_' + Date.now(),
+                type:  type,
+                title: title,
+                text:  text,
+                date:  new Date().toISOString()
+            });
+        }
         saveAnnouncements();
         document.getElementById('announcement-form').reset();
         renderAnnouncements();
-        showToast('Sucesso', 'Aviso publicado no mural dos alunos.', 'success');
+        showToast('Sucesso', 'Aviso salvo com sucesso no mural dos alunos.', 'success');
     }
 });
+
+window.editAnnouncement = function(id) {
+    const ann = announcements.find(a => a.id === id);
+    if (ann) {
+        document.getElementById('ann-title').value = ann.title;
+        document.getElementById('ann-desc').value = ann.text;
+        document.getElementById('ann-type').value = ann.type;
+        editingAnnId = id;
+        document.getElementById('announcement-form').scrollIntoView({behavior: 'smooth'});
+    }
+}
 
 window.deleteAnnouncement = function(id) {
     if (confirm('Deseja remover este aviso?')) {
@@ -358,16 +476,16 @@ function renderUsers(customList) {
             : `<span style="color:var(--primary-medium); font-weight:600;"><i class="fa-solid fa-user-graduate"></i> Aluno</span>`;
 
         const statusLabel = isBanned
-            ? `<span class="status-badge status-rejected"><i class="fa-solid fa-ban"></i> Banido</span>`
+            ? `<span class="status-badge status-rejected"><i class="fa-solid fa-volume-xmark"></i> Silenciado</span>`
             : `<span class="status-badge status-approved"><i class="fa-solid fa-circle-check"></i> Ativo</span>`;
 
         const actionBtn = isAdmin
             ? `<span style="color:var(--text-muted); font-size:0.85rem;">—</span>`
             : isBanned
                 ? `<button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem; color:var(--upvote-color); border-color:var(--upvote-color);"
-                    onclick="toggleBanUser('${user.email}')"><i class="fa-solid fa-unlock"></i> Desbanir</button>`
+                    onclick="toggleBanUser('${user.email}')"><i class="fa-solid fa-volume-high"></i> Desmutar</button>`
                 : `<button class="btn btn-outline" style="padding:0.4rem 0.8rem; font-size:0.8rem; color:var(--downvote-color); border-color:var(--downvote-color);"
-                    onclick="toggleBanUser('${user.email}')"><i class="fa-solid fa-ban"></i> Banir</button>`;
+                    onclick="toggleBanUser('${user.email}')"><i class="fa-solid fa-volume-xmark"></i> Silenciar</button>`;
 
         const courseMeta = [user.className, user.course]
             .filter(v => v && v !== 'Ensino Regular (Sem Curso)' && v !== 'Professor/Direção' && v !== 'Professor' && v !== 'Aluno')
@@ -402,11 +520,11 @@ window.toggleBanUser = function(email) {
     if (idx > -1) {
         // Unban
         bannedUsers.splice(idx, 1);
-        showToast('Desbanido', `O usuário ${email} voltou a ter acesso.`, 'success');
+        showToast('Desmutado', `O usuário ${email} voltou a poder interagir.`, 'success');
     } else {
         // Ban
         bannedUsers.push(email);
-        showToast('Banido', `O usuário ${email} foi banido da plataforma.`, 'error');
+        showToast('Silenciado', `O usuário ${email} foi silenciado da plataforma.`, 'error');
     }
     saveBannedUsers();
     renderUsers();

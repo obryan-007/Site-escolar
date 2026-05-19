@@ -423,8 +423,8 @@ loginForm.addEventListener('submit', (e) => {
     }
 
     if (bannedUsers.includes(email)) {
-        showToast('Erro', 'Esta conta foi banida por violação das regras.', 'error');
-        return;
+        showToast('Aviso', 'Sua conta foi silenciada por violação das regras. Você pode visualizar o painel, mas não poderá interagir.', 'error');
+        // Do NOT return, let them login as read-only essentially.
     }
 
     const mockUser = {
@@ -458,7 +458,7 @@ function isInnovator(uid) {
 function renderPosts() {
     postsContainer.innerHTML = '';
 
-    const sortedPosts = [...posts].sort((a, b) => {
+    let sortedPosts = [...posts].sort((a, b) => {
         if (currentSort === 'hot') {
             const scoreA = a.upvotes - a.downvotes;
             const scoreB = b.upvotes - b.downvotes;
@@ -467,6 +467,17 @@ function renderPosts() {
             return new Date(b.createdAt) - new Date(a.createdAt);
         }
     });
+
+    const searchInput = document.getElementById('post-search');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    if (searchTerm) {
+        sortedPosts = sortedPosts.filter(p => 
+            p.title.toLowerCase().includes(searchTerm) || 
+            p.description.toLowerCase().includes(searchTerm) ||
+            p.author.toLowerCase().includes(searchTerm)
+        );
+    }
 
     if (sortedPosts.length === 0) {
         postsContainer.innerHTML = `
@@ -551,7 +562,8 @@ function renderPosts() {
                 <p class="post-desc">${post.description}</p>
                 
                 <div class="post-actions">
-                    <button class="action-btn" onclick="toggleCommentsSection('${post.id}')"><i class="fa-regular fa-comment"></i> Compartilhar / ${post.comments ? post.comments.length : 0} Comentários</button>
+                    <button class="action-btn" onclick="toggleCommentsSection('${post.id}')"><i class="fa-regular fa-comment"></i> ${post.comments ? post.comments.length : 0} Comentários</button>
+                    <button class="action-btn" onclick="shareWhatsApp('${post.id}', '${post.title.replace(/'/g, "\\'")}')"><i class="fa-brands fa-whatsapp"></i> Compartilhar</button>
                     <button class="action-btn" onclick="reportPost('${post.id}')"><i class="fa-regular fa-flag"></i> Reportar</button>
                 </div>
                 
@@ -657,10 +669,14 @@ function renderRanking() {
 }
 
 // Voting logic
-// Voting logic
 window.handleVote = function (id, type) {
     if (!currentUser) {
         showAuthModal();
+        return;
+    }
+    const bannedList = JSON.parse(localStorage.getItem(BANNED_USERS_KEY)) || [];
+    if (bannedList.includes(currentUser.email)) {
+        showToast('Ação Bloqueada', 'Sua conta está silenciada. Você não pode votar.', 'error');
         return;
     }
 
@@ -828,6 +844,11 @@ window.addComment = function(e, postId) {
         showAuthModal();
         return;
     }
+    const bannedList = JSON.parse(localStorage.getItem(BANNED_USERS_KEY)) || [];
+    if (bannedList.includes(currentUser.email)) {
+        showToast('Ação Bloqueada', 'Sua conta está silenciada. Você não pode comentar.', 'error');
+        return;
+    }
 
     const input = document.getElementById(`comment-input-${postId}`);
     const text = input.value.trim();
@@ -914,6 +935,11 @@ function openModal() {
         showAuthModal();
         return;
     }
+    const bannedList = JSON.parse(localStorage.getItem(BANNED_USERS_KEY)) || [];
+    if (bannedList.includes(currentUser.email)) {
+        showToast('Ação Bloqueada', 'Sua conta está silenciada. Você não pode criar ideias.', 'error');
+        return;
+    }
     document.getElementById('post-modal-title').textContent = 'Criar nova postagem';
     editingPostId = null;
     postModal.classList.add('active');
@@ -938,6 +964,7 @@ postForm.addEventListener('submit', (e) => {
 
     const title = document.getElementById('post-title').value.trim();
     const desc = document.getElementById('post-desc').value.trim();
+    const isAnonymous = document.getElementById('post-anonymous') ? document.getElementById('post-anonymous').checked : false;
 
     if (containsBadWords(title) || containsBadWords(desc)) {
         showToast("Aviso", "Sua postagem contém palavras impróprias. Por favor, reescreva de forma respeitosa.", "error");
@@ -973,9 +1000,9 @@ postForm.addEventListener('submit', (e) => {
                 upvotes: 1,
                 downvotes: 0,
                 createdAt: new Date().toISOString(),
-                author: currentUser.name,
+                author: isAnonymous ? 'Anônimo' : currentUser.name,
                 authorUid: currentUser.uid,
-                authorMeta: authorMetaStr,
+                authorMeta: isAnonymous ? 'Aluno' : authorMetaStr,
                 role: currentUser.role,
                 highlighted: false,
                 userVotes: {
@@ -997,6 +1024,15 @@ postForm.addEventListener('submit', (e) => {
         }
     }
 });
+
+// Search
+document.getElementById('post-search')?.addEventListener('input', renderPosts);
+
+window.shareWhatsApp = function(id, title) {
+    const url = window.location.href.split('#')[0] + '#post-' + id;
+    const text = `Olha essa ideia no Voz do Aluno: "${title}". Me ajude a chegar em 50 votos! ${url}`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+}
 
 // Filtering
 filterBtns.forEach(btn => {

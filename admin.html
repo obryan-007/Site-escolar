@@ -182,13 +182,27 @@
                         </div>
                     </div>
                 </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 2rem; margin-top: 2rem;">
+                    <div class="card" style="padding: 1.5rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md);">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: var(--text-main);">Ideias por Turma / Curso</h3>
+                        <canvas id="coursesChart" style="max-height: 250px;"></canvas>
+                    </div>
+                    <div class="card" style="padding: 1.5rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: var(--radius-md);">
+                        <h3 style="margin-bottom: 1rem; font-size: 1.1rem; color: var(--text-main);">Status das Ideias (50+ votos)</h3>
+                        <canvas id="statusChart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
             </section>
 
             <!-- Highlights View -->
             <section id="highlight-view" class="view-section">
                 <h2 style="margin-bottom: 1.5rem;">Ideias em Destaque (Aguardando Resposta)</h2>
                 <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Aqui estão as ideias que atingiram mais de 50 votos. Como direção, você pode responder oficialmente, e sua resposta será fixada no topo dos comentários.</p>
-                <input type="text" id="highlight-search" class="admin-search-input" placeholder="Buscar por título, autor ou palavra-chave...">
+                <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+                    <input type="text" id="highlight-search" class="admin-search-input" placeholder="Buscar por título, autor ou palavra-chave..." style="flex: 1;">
+                    <button class="btn btn-outline" onclick="exportHighlightsCSV()" style="background: var(--card-bg); color: var(--upvote-color); border-color: var(--upvote-color);"><i class="fa-solid fa-file-excel"></i> Baixar Relatório (CSV)</button>
+                </div>
                 <div class="table-wrapper">
                     <table>
                         <thead>
@@ -262,7 +276,7 @@
             <!-- Users View -->
             <section id="users-view" class="view-section">
                 <h2 style="margin-bottom: 1.5rem;">Gestão de Usuários</h2>
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Veja os alunos e professores cadastrados no sistema. Você pode aplicar banimentos para restringir o acesso.</p>
+                <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Veja os alunos e professores cadastrados no sistema. Você pode silenciar contas para restringir interações (votos, posts, comentários) de quem desrespeita as regras.</p>
                 <input type="text" id="user-search" class="admin-search-input" placeholder="Buscar por nome ou e-mail...">
                 <div class="table-wrapper">
                     <table>
@@ -316,6 +330,8 @@
 
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- We will use a dedicated admin.js file -->
     <script src="admin.js"></script>
 </body>
